@@ -100,7 +100,6 @@ with gr.Blocks() as demo:
         input_image = gr.ImageMask(
             type="pil",
             label="Input Image",
-            canvas_size=(1024, 1024),
             crop_size=(1024, 1024),
             layers=False,
             sources=["upload"],
