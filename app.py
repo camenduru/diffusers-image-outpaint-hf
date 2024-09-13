@@ -58,8 +58,8 @@ prompt = "high quality"
 @spaces.GPU
 def fill_image(image, model_selection):
 
-    margin = 100
-    overlap = 10
+    margin = 256
+    overlap = 24
     # Open the original image
     source = image  # Changed from image["background"] to match new input format
     
