@@ -119,11 +119,9 @@ def fill_image(image, model_selection):
     target_aspect = target_width / target_height
     
     if source_aspect > target_aspect:
-        # Image is wider than target ratio, fit to width
         new_width = target_width
         new_height = int(new_width / source_aspect)
     else:
-        # Image is taller than target ratio, fit to height
         new_height = target_height
         new_width = int(new_height * source_aspect)
     
@@ -140,25 +138,24 @@ def fill_image(image, model_selection):
     position = (margin_x, margin_y)
     background.paste(resized_source, position)
     
-    # Create the mask with gradient edges
-    mask = Image.new('L', (target_width, target_height), 255)
+    # Create the mask
+    mask = Image.new('L', (target_width, target_height), 255)  # Start with all white
     mask_array = np.array(mask)
     
-    # Create gradient for left and right edges
+    # Create gradient only at the edges adjacent to the original image
     for i in range(fade_width):
         alpha = i / fade_width
-        mask_array[:, margin_x+overlap+i] = np.minimum(mask_array[:, margin_x+overlap+i], int(255 * (1 - alpha)))
-        mask_array[:, margin_x+new_width-overlap-i-1] = np.minimum(mask_array[:, margin_x+new_width-overlap-i-1], int(255 * (1 - alpha)))
+        # Right edge
+        mask_array[:, margin_x + new_width + i] = np.minimum(mask_array[:, margin_x + new_width + i], int(255 * alpha))
+        # Left edge
+        mask_array[:, margin_x - i - 1] = np.minimum(mask_array[:, margin_x - i - 1], int(255 * alpha))
+        # Bottom edge
+        mask_array[margin_y + new_height + i, :] = np.minimum(mask_array[margin_y + new_height + i, :], int(255 * alpha))
+        # Top edge
+        mask_array[margin_y - i - 1, :] = np.minimum(mask_array[margin_y - i - 1, :], int(255 * alpha))
     
-    # Create gradient for top and bottom edges
-    for i in range(fade_width):
-        alpha = i / fade_width
-        mask_array[margin_y+overlap+i, :] = np.minimum(mask_array[margin_y+overlap+i, :], int(255 * (1 - alpha)))
-        mask_array[margin_y+new_height-overlap-i-1, :] = np.minimum(mask_array[margin_y+new_height-overlap-i-1, :], int(255 * (1 - alpha)))
-    
-    # Set the center to black
-    mask_array[margin_y+overlap+fade_width:margin_y+new_height-overlap-fade_width, 
-               margin_x+overlap+fade_width:margin_x+new_width-overlap-fade_width] = 0
+    # Set the area of the original image to black (0)
+    mask_array[margin_y:margin_y+new_height, margin_x:margin_x+new_width] = 0
     
     mask = Image.fromarray(mask_array.astype('uint8'), 'L')
     
