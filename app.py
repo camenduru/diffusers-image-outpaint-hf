@@ -111,6 +111,14 @@ def fill_image(image, model_selection):
     target_height=1280
     overlap=48
     fade_width=24
+    max_width = 720
+    # Resize the image if it's wider than max_width
+    if source.width > max_width:
+        scale_factor = max_width / source.width
+        new_width = max_width
+        new_height = int(source.height * scale_factor)
+        source = source.resize((new_width, new_height), Image.LANCZOS)
+    
     # Calculate the required height for 9:16 ratio
     target_height = (source.width * target_ratio[1]) // target_ratio[0]
     
