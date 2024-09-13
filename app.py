@@ -82,25 +82,28 @@ def clear_result():
     return gr.update(value=None)
 
 
+css = """
+.gradio-container {
+    width: 1024px !important;
+}
+"""
+
+
 title = """<h1 align="center">Diffusers Image Fill</h1>
 <div align="center">Draw the mask over the subject you want to erase or change.</div>
 """
 
-with gr.Blocks() as demo:
+with gr.Blocks(css=css) as demo:
     gr.HTML(title)
-    with gr.Row():
-        model_selection = gr.Dropdown(
-            choices=list(MODELS.keys()),
-            value="RealVisXL V5.0 Lightning",
-            label="Model",
-        )
-        run_button = gr.Button("Generate")
+
+    run_button = gr.Button("Generate")
 
     with gr.Row():
         input_image = gr.ImageMask(
             type="pil",
             label="Input Image",
             crop_size=(1024, 1024),
+            canvas_size=(1024, 1024),
             layers=False,
             sources=["upload"],
         )
@@ -109,6 +112,12 @@ with gr.Blocks() as demo:
             interactive=False,
             label="Generated Image",
         )
+
+    model_selection = gr.Dropdown(
+        choices=list(MODELS.keys()),
+        value="RealVisXL V5.0 Lightning",
+        label="Model",
+    )
 
     run_button.click(
         fn=clear_result,
