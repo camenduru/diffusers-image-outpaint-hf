@@ -102,7 +102,7 @@ def fill_image(image, model_selection):
     cnet_image.paste(image, (0, 0), mask)
 
     yield background, cnet_image
-"""
+
 
 @spaces.GPU
 def fill_image(image, model_selection):
@@ -162,6 +162,67 @@ def fill_image(image, model_selection):
     cnet_image.paste(image, (0, 0), mask)
 
     yield background, cnet_image
+"""
+
+def fill_image(image, model_selection):
+    source = image
+    target_ratio = (16, 9)  # Set the new target ratio to 16:9
+    target_width = 1280  # Adjust target width based on desired resolution
+    overlap = 48
+    fade_width = 24
+    max_height = 720  # Adjust max height instead of width
+    
+    # Resize the image if it's taller than max_height
+    if source.height > max_height:
+        scale_factor = max_height / source.height
+        new_height = max_height
+        new_width = int(source.width * scale_factor)
+        source = source.resize((new_width, new_height), Image.LANCZOS)
+    
+    # Calculate the required width for the 16:9 ratio
+    target_width = (source.height * target_ratio[0]) // target_ratio[1]
+    
+    # Calculate margins (now left and right)
+    margin_x = (target_width - source.width) // 2
+    
+    # Calculate new output size
+    output_size = (target_width, source.height)
+    
+    # Create a white background
+    background = Image.new('RGB', output_size, (255, 255, 255))
+    
+    # Calculate position to paste the original image
+    position = (margin_x, 0)
+    
+    # Paste the original image onto the white background
+    background.paste(source, position)
+    
+    # Create the mask
+    mask = Image.new('L', output_size, 255)  # Start with all white
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.rectangle([
+        (margin_x + overlap, overlap),
+        (margin_x + source.width - overlap, source.height - overlap)
+    ], fill=0)
+    
+    # Prepare the image for ControlNet
+    cnet_image = background.copy()
+    cnet_image.paste(0, (0, 0), mask)
+
+    for image in pipe(
+        prompt_embeds=prompt_embeds,
+        negative_prompt_embeds=negative_prompt_embeds,
+        pooled_prompt_embeds=pooled_prompt_embeds,
+        negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
+        image=cnet_image,
+    ):
+        yield image, cnet_image
+
+    image = image.convert("RGBA")
+    cnet_image.paste(image, (0, 0), mask)
+
+    yield background, cnet_image
+
 
 def clear_result():
     return gr.update(value=None)
