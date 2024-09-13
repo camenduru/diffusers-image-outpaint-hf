@@ -55,7 +55,7 @@ prompt = "high quality"
 ) = pipe.encode_prompt(prompt, "cuda", True)
 
 
-@spaces.GPU
+
 """
 def fill_image(image, model_selection):
 
@@ -103,6 +103,7 @@ def fill_image(image, model_selection):
     yield background, cnet_image
 """
 
+@spaces.GPU
 def fill_image(image, model_selection):
     source = image
     target_ratio=(9, 16)
