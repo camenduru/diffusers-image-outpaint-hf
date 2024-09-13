@@ -56,6 +56,7 @@ prompt = "high quality"
 
 
 @spaces.GPU
+"""
 def fill_image(image, model_selection):
 
     margin = 256
@@ -100,7 +101,56 @@ def fill_image(image, model_selection):
     cnet_image.paste(image, (0, 0), mask)
 
     yield background, cnet_image
+"""
 
+def fill_image(image, model_selection):
+    source = image
+    target_ratio=(9, 16)
+    overlap=24
+    # Calculate the target width based on the 9:16 ratio
+    target_width = (source.height * target_ratio[0]) // target_ratio[1]
+    
+    # Calculate margins
+    margin_x = max(0, (target_width - source.width) // 2)
+    margin_y = 0  # No vertical expansion
+    
+    # Calculate new output size
+    output_size = (source.width + 2*margin_x, source.height + 2*margin_y)
+    
+    # Create a white background
+    background = Image.new('RGB', output_size, (255, 255, 255))
+    
+    # Calculate position to paste the original image
+    position = (margin_x, margin_y)
+    
+    # Paste the original image onto the white background
+    background.paste(source, position)
+    
+    # Create the mask
+    mask = Image.new('L', output_size, 255)  # Start with all white
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.rectangle([
+        (position[0] + overlap, position[1] + overlap),
+        (position[0] + source.width - overlap, position[1] + source.height - overlap)
+    ], fill=0)
+    
+    # Prepare the image for ControlNet
+    cnet_image = background.copy()
+    cnet_image.paste(0, (0, 0), mask)
+
+    for image in pipe(
+        prompt_embeds=prompt_embeds,
+        negative_prompt_embeds=negative_prompt_embeds,
+        pooled_prompt_embeds=pooled_prompt_embeds,
+        negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
+        image=cnet_image,
+    ):
+        yield image, cnet_image
+
+    image = image.convert("RGBA")
+    cnet_image.paste(image, (0, 0), mask)
+
+    yield background, cnet_image
 
 def clear_result():
     return gr.update(value=None)
