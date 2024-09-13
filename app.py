@@ -60,7 +60,7 @@ def fill_image(image, model_selection):
 
     margin = 100
     # Open the original image
-    source = image["image"]  # Changed from image["background"] to match new input format
+    source = image  # Changed from image["background"] to match new input format
     
     # Calculate new output size
     output_size = (source.width + 2*margin, source.height + 2*margin)
@@ -119,12 +119,9 @@ with gr.Blocks(css=css) as demo:
     run_button = gr.Button("Generate")
 
     with gr.Row():
-        input_image = gr.ImageMask(
+        input_image = gr.Image(
             type="pil",
             label="Input Image",
-            crop_size=(1024, 1024),
-            canvas_size=(1024, 1024),
-            layers=False,
             sources=["upload"],
         )
 
