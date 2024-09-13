@@ -109,7 +109,7 @@ def fill_image(image, model_selection):
     source = image
     target_ratio=(9, 16)
     target_height=1280
-    overlap=128
+    overlap=48
     fade_width=24
     max_width = 720
     # Resize the image if it's wider than max_width
