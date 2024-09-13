@@ -10,6 +10,7 @@ from controlnet_union import ControlNetModel_Union
 from pipeline_fill_sd_xl import StableDiffusionXLFillPipeline
 
 from PIL import Image, ImageDraw
+import numpy as np
 
 MODELS = {
     "RealVisXL V5.0 Lightning": "SG161222/RealVisXL_V5.0_Lightning",
@@ -107,33 +108,59 @@ def fill_image(image, model_selection):
 def fill_image(image, model_selection):
     source = image
     target_ratio=(9, 16)
-    overlap=24
-    # Calculate the target width based on the 9:16 ratio
-    target_width = (source.height * target_ratio[0]) // target_ratio[1]
+    target_height=1280
+    overlap=48
+    fade_width=24
+    # Calculate target dimensions
+    target_width = (target_height * target_ratio[0]) // target_ratio[1]
+    
+    # Resize the source image to fit within the target dimensions while maintaining aspect ratio
+    source_aspect = source.width / source.height
+    target_aspect = target_width / target_height
+    
+    if source_aspect > target_aspect:
+        # Image is wider than target ratio, fit to width
+        new_width = target_width
+        new_height = int(new_width / source_aspect)
+    else:
+        # Image is taller than target ratio, fit to height
+        new_height = target_height
+        new_width = int(new_height * source_aspect)
+    
+    resized_source = source.resize((new_width, new_height), Image.LANCZOS)
     
     # Calculate margins
-    margin_x = max(0, (target_width - source.width) // 2)
-    margin_y = 0  # No vertical expansion
-    
-    # Calculate new output size
-    output_size = (source.width + 2*margin_x, source.height + 2*margin_y)
+    margin_x = (target_width - new_width) // 2
+    margin_y = (target_height - new_height) // 2
     
     # Create a white background
-    background = Image.new('RGB', output_size, (255, 255, 255))
+    background = Image.new('RGB', (target_width, target_height), (255, 255, 255))
     
-    # Calculate position to paste the original image
+    # Paste the resized image onto the white background
     position = (margin_x, margin_y)
+    background.paste(resized_source, position)
     
-    # Paste the original image onto the white background
-    background.paste(source, position)
+    # Create the mask with gradient edges
+    mask = Image.new('L', (target_width, target_height), 255)
+    mask_array = np.array(mask)
     
-    # Create the mask
-    mask = Image.new('L', output_size, 255)  # Start with all white
-    mask_draw = ImageDraw.Draw(mask)
-    mask_draw.rectangle([
-        (position[0] + overlap, position[1] + overlap),
-        (position[0] + source.width - overlap, position[1] + source.height - overlap)
-    ], fill=0)
+    # Create gradient for left and right edges
+    for i in range(fade_width):
+        alpha = i / fade_width
+        mask_array[:, margin_x+overlap+i] = np.minimum(mask_array[:, margin_x+overlap+i], int(255 * (1 - alpha)))
+        mask_array[:, margin_x+new_width-overlap-i-1] = np.minimum(mask_array[:, margin_x+new_width-overlap-i-1], int(255 * (1 - alpha)))
+    
+    # Create gradient for top and bottom edges
+    for i in range(fade_width):
+        alpha = i / fade_width
+        mask_array[margin_y+overlap+i, :] = np.minimum(mask_array[margin_y+overlap+i, :], int(255 * (1 - alpha)))
+        mask_array[margin_y+new_height-overlap-i-1, :] = np.minimum(mask_array[margin_y+new_height-overlap-i-1, :], int(255 * (1 - alpha)))
+    
+    # Set the center to black
+    mask_array[margin_y+overlap+fade_width:margin_y+new_height-overlap-fade_width, 
+               margin_x+overlap+fade_width:margin_x+new_width-overlap-fade_width] = 0
+    
+    mask = Image.fromarray(mask_array.astype('uint8'), 'L')
     
     # Prepare the image for ControlNet
     cnet_image = background.copy()
