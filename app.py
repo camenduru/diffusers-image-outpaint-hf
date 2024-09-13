@@ -1,5 +1,3 @@
-import os
-
 import gradio as gr
 import spaces
 import torch
@@ -10,9 +8,6 @@ from huggingface_hub import hf_hub_download
 
 from controlnet_union import ControlNetModel_Union
 from pipeline_fill_sd_xl import StableDiffusionXLFillPipeline
-
-os.system("pip uninstall -y gradio")
-os.system("pip install gradio==4.42.0")
 
 MODELS = {
     "RealVisXL V5.0 Lightning": "SG161222/RealVisXL_V5.0_Lightning",
