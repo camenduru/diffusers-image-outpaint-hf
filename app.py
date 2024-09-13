@@ -102,7 +102,7 @@ def fill_image(image, model_selection):
     cnet_image.paste(image, (0, 0), mask)
 
     yield background, cnet_image
-
+"""
 
 @spaces.GPU
 def fill_image(image, model_selection):
@@ -223,6 +223,8 @@ def fill_image(image, model_selection):
 
     yield background, cnet_image
 
+"""
+        
 
 def clear_result():
     return gr.update(value=None)
