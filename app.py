@@ -114,52 +114,47 @@ def fill_image(image, model_selection):
     # Calculate target dimensions
     target_width = (target_height * target_ratio[0]) // target_ratio[1]
     
-    # Resize the source image to fit within the target dimensions while maintaining aspect ratio
-    source_aspect = source.width / source.height
-    target_aspect = target_width / target_height
-    
-    if source_aspect > target_aspect:
-        new_width = target_width
-        new_height = int(new_width / source_aspect)
-    else:
-        new_height = target_height
-        new_width = int(new_height * source_aspect)
-    
+    # Resize the source image to fit the target width
+    new_width = target_width
+    new_height = int(source.height * (new_width / source.width))
     resized_source = source.resize((new_width, new_height), Image.LANCZOS)
-    
-    # Calculate margins
-    margin_x = (target_width - new_width) // 2
-    margin_y = (target_height - new_height) // 2
     
     # Create a white background
     background = Image.new('RGB', (target_width, target_height), (255, 255, 255))
     
+    # Calculate position to paste the resized image (centered vertically)
+    margin_y = (target_height - new_height) // 2
+    position = (0, margin_y)
+    
     # Paste the resized image onto the white background
-    position = (margin_x, margin_y)
     background.paste(resized_source, position)
     
     # Create the mask
     mask = Image.new('L', (target_width, target_height), 255)  # Start with all white
+    mask_draw = ImageDraw.Draw(mask)
+    
+    # Draw black rectangle for the resized image area (with overlap)
+    mask_draw.rectangle([
+        (-overlap, margin_y - overlap),
+        (new_width + overlap, margin_y + new_height + overlap)
+    ], fill=0)
+    
+    # Convert mask to numpy array for gradient creation
     mask_array = np.array(mask)
     
-    # Create gradient only at the edges adjacent to the original image
+    # Create gradient on the edges that overlap with the image
     for i in range(fade_width):
         alpha = i / fade_width
-        # Right edge
-        if margin_x + new_width + i < target_width:
-            mask_array[:, margin_x + new_width + i] = np.minimum(mask_array[:, margin_x + new_width + i], int(255 * alpha))
-        # Left edge
-        if margin_x - i - 1 >= 0:
-            mask_array[:, margin_x - i - 1] = np.minimum(mask_array[:, margin_x - i - 1], int(255 * alpha))
-        # Bottom edge
-        if margin_y + new_height + i < target_height:
-            mask_array[margin_y + new_height + i, :] = np.minimum(mask_array[margin_y + new_height + i, :], int(255 * alpha))
         # Top edge
-        if margin_y - i - 1 >= 0:
-            mask_array[margin_y - i - 1, :] = np.minimum(mask_array[margin_y - i - 1, :], int(255 * alpha))
-    
-    # Set the area of the original image to black (0)
-    mask_array[margin_y:margin_y+new_height, margin_x:margin_x+new_width] = 0
+        if margin_y - overlap + i < margin_y:
+            mask_array[margin_y - overlap + i, :new_width] = int(255 * alpha)
+        # Bottom edge
+        if margin_y + new_height + overlap - i - 1 >= margin_y + new_height:
+            mask_array[margin_y + new_height + overlap - i - 1, :new_width] = int(255 * alpha)
+        # Left edge
+        mask_array[margin_y:margin_y+new_height, i] = int(255 * alpha)
+        # Right edge
+        mask_array[margin_y:margin_y+new_height, new_width - i - 1] = int(255 * alpha)
     
     mask = Image.fromarray(mask_array.astype('uint8'), 'L')
     
