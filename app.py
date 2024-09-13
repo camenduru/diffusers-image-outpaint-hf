@@ -59,6 +59,7 @@ prompt = "high quality"
 def fill_image(image, model_selection):
 
     margin = 100
+    overlap = 10
     # Open the original image
     source = image  # Changed from image["background"] to match new input format
     
@@ -77,7 +78,10 @@ def fill_image(image, model_selection):
     # Create the mask
     mask = Image.new('L', output_size, 255)  # Start with all white
     mask_draw = ImageDraw.Draw(mask)
-    mask_draw.rectangle([position, (position[0] + source.width, position[1] + source.height)], fill=0)
+    mask_draw.rectangle([
+        (position[0] + overlap, position[1] + overlap),
+        (position[0] + source.width - overlap, position[1] + source.height - overlap)
+    ], fill=0)
     
     # Prepare the image for ControlNet
     cnet_image = background.copy()
