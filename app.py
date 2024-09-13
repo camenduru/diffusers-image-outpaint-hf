@@ -9,6 +9,8 @@ from huggingface_hub import hf_hub_download
 from controlnet_union import ControlNetModel_Union
 from pipeline_fill_sd_xl import StableDiffusionXLFillPipeline
 
+from PIL import Image, ImageDraw
+
 MODELS = {
     "RealVisXL V5.0 Lightning": "SG161222/RealVisXL_V5.0_Lightning",
 }
@@ -55,13 +57,31 @@ prompt = "high quality"
 
 @spaces.GPU
 def fill_image(image, model_selection):
-    source = image["background"]
-    mask = image["layers"][0]
 
-    alpha_channel = mask.split()[3]
-    binary_mask = alpha_channel.point(lambda p: p > 0 and 255)
-    cnet_image = source.copy()
-    cnet_image.paste(0, (0, 0), binary_mask)
+    margin = 100
+    # Open the original image
+    source = image["image"]  # Changed from image["background"] to match new input format
+    
+    # Calculate new output size
+    output_size = (source.width + 2*margin, source.height + 2*margin)
+    
+    # Create a white background
+    background = Image.new('RGB', output_size, (255, 255, 255))
+    
+    # Calculate position to paste the original image
+    position = (margin, margin)
+    
+    # Paste the original image onto the white background
+    background.paste(source, position)
+    
+    # Create the mask
+    mask = Image.new('L', output_size, 255)  # Start with all white
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.rectangle([position, (position[0] + source.width, position[1] + source.height)], fill=0)
+    
+    # Prepare the image for ControlNet
+    cnet_image = background.copy()
+    cnet_image.paste(0, (0, 0), mask)
 
     for image in pipe(
         prompt_embeds=prompt_embeds,
@@ -73,9 +93,9 @@ def fill_image(image, model_selection):
         yield image, cnet_image
 
     image = image.convert("RGBA")
-    cnet_image.paste(image, (0, 0), binary_mask)
+    cnet_image.paste(image, (0, 0), mask)
 
-    yield source, cnet_image
+    yield background, cnet_image
 
 
 def clear_result():
