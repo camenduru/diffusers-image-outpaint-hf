@@ -146,13 +146,17 @@ def fill_image(image, model_selection):
     for i in range(fade_width):
         alpha = i / fade_width
         # Right edge
-        mask_array[:, margin_x + new_width + i] = np.minimum(mask_array[:, margin_x + new_width + i], int(255 * alpha))
+        if margin_x + new_width + i < target_width:
+            mask_array[:, margin_x + new_width + i] = np.minimum(mask_array[:, margin_x + new_width + i], int(255 * alpha))
         # Left edge
-        mask_array[:, margin_x - i - 1] = np.minimum(mask_array[:, margin_x - i - 1], int(255 * alpha))
+        if margin_x - i - 1 >= 0:
+            mask_array[:, margin_x - i - 1] = np.minimum(mask_array[:, margin_x - i - 1], int(255 * alpha))
         # Bottom edge
-        mask_array[margin_y + new_height + i, :] = np.minimum(mask_array[margin_y + new_height + i, :], int(255 * alpha))
+        if margin_y + new_height + i < target_height:
+            mask_array[margin_y + new_height + i, :] = np.minimum(mask_array[margin_y + new_height + i, :], int(255 * alpha))
         # Top edge
-        mask_array[margin_y - i - 1, :] = np.minimum(mask_array[margin_y - i - 1, :], int(255 * alpha))
+        if margin_y - i - 1 >= 0:
+            mask_array[margin_y - i - 1, :] = np.minimum(mask_array[margin_y - i - 1, :], int(255 * alpha))
     
     # Set the area of the original image to black (0)
     mask_array[margin_y:margin_y+new_height, margin_x:margin_x+new_width] = 0
