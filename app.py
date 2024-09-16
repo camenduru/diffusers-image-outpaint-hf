@@ -223,7 +223,7 @@ def fill_image(image, model_selection):
 
     yield background, cnet_image
 
-"""
+
         
 
 def clear_result():
