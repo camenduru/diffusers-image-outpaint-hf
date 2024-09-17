@@ -1,6 +1,6 @@
 ---
-title: Diffusers Image Fill
-emoji: 🏃
+title: Diffusers Image Outpaint
+emoji: 🔅
 colorFrom: gray
 colorTo: purple
 sdk: gradio
