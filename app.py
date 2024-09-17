@@ -272,9 +272,9 @@ with gr.Blocks(css=css) as demo:
 
                 gr.Examples(
                     examples = [
-                        ["/examples/example_1.webp", "RealVisXL V5.0 Lightning", "16:9"],
-                        ["/examples/example_2.jpg", "RealVisXL V5.0 Lightning", "16:9"],
-                        ["/examples/example_3.jpg", "RealVisXL V5.0 Lightning", "9:16"]
+                        ["./examples/example_1.webp", "RealVisXL V5.0 Lightning", "16:9"],
+                        ["./examples/example_2.jpg", "RealVisXL V5.0 Lightning", "16:9"],
+                        ["./examples/example_3.jpg", "RealVisXL V5.0 Lightning", "9:16"]
                     ],
                     inputs = [input_image, model_selection, ratio]
                 )
