@@ -112,8 +112,8 @@ def infer(image, model_selection, ratio_choice):
     if ratio_choice == "16:9":
         target_ratio = (16, 9)  # Set the new target ratio to 16:9
         target_width = 1280  # Adjust target width based on desired resolution
-        overlap = 48
-        fade_width = 24
+        overlap = 42
+        #fade_width = 24
         max_height = 720  # Adjust max height instead of width
         
         # Resize the image if it's taller than max_height
@@ -171,8 +171,8 @@ def infer(image, model_selection, ratio_choice):
         
         target_ratio=(9, 16)
         target_height=1280
-        overlap=48
-        fade_width=24
+        overlap=42
+        #fade_width=24
         max_width = 720
         # Resize the image if it's wider than max_width
         if source.width > max_width:
@@ -269,6 +269,15 @@ with gr.Blocks(css=css) as demo:
                     )
     
                 run_button = gr.Button("Generate")
+
+                gr.Examples(
+                    examples = [
+                        ["/examples/example_1.webp", "RealVisXL V5.0 Lightning", "16:9"],
+                        ["/examples/example_2.jpg", "RealVisXL V5.0 Lightning", "16:9"],
+                        ["/examples/example_3.jpg", "RealVisXL V5.0 Lightning", "9:16"]
+                    ],
+                    inputs = [input_image, model_selection, ratio]
+                )
             
             with gr.Column():
                 result = ImageSlider(
