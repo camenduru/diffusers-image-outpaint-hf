@@ -160,7 +160,7 @@ def infer(image, model_selection, ratio_choice, overlap_width):
             negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
             image=cnet_image,
         ):
-            yield image, cnet_image
+            yield cnet_image, image
     
         image = image.convert("RGBA")
         cnet_image.paste(image, (0, 0), mask)
@@ -218,7 +218,7 @@ def infer(image, model_selection, ratio_choice, overlap_width):
             negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
             image=cnet_image,
         ):
-            yield image, cnet_image
+            yield cnet_image, image
     
         image = image.convert("RGBA")
         cnet_image.paste(image, (0, 0), mask)
