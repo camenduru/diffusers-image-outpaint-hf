@@ -105,14 +105,14 @@ def fill_image(image, model_selection):
 """
 
 @spaces.GPU
-def infer(image, model_selection, ratio_choice):
+def infer(image, model_selection, ratio_choice, overlap_width):
 
     source = image
     
     if ratio_choice == "16:9":
         target_ratio = (16, 9)  # Set the new target ratio to 16:9
         target_width = 1280  # Adjust target width based on desired resolution
-        overlap = 42
+        overlap = overlap_width
         #fade_width = 24
         max_height = 720  # Adjust max height instead of width
         
@@ -171,7 +171,7 @@ def infer(image, model_selection, ratio_choice):
         
         target_ratio=(9, 16)
         target_height=1280
-        overlap=42
+        overlap=overlap_width
         #fade_width=24
         max_width = 720
         # Resize the image if it's wider than max_width
@@ -267,6 +267,14 @@ with gr.Blocks(css=css) as demo:
                         value="RealVisXL V5.0 Lightning",
                         label="Model",
                     )
+
+                overlap_width = gr.Slider(
+                    label="Mask overlap width",
+                    minimum = 1,
+                    maximum = 50,
+                    value = 42,
+                    step = 1
+                )
     
                 run_button = gr.Button("Generate")
 
@@ -291,7 +299,7 @@ with gr.Blocks(css=css) as demo:
         outputs=result,
     ).then(
         fn=infer,
-        inputs=[input_image, model_selection, ratio],
+        inputs=[input_image, model_selection, ratio, overlap_width],
         outputs=result,
     )
 
