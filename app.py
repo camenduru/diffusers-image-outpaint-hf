@@ -47,178 +47,69 @@ pipe = StableDiffusionXLFillPipeline.from_pretrained(
 
 pipe.scheduler = TCDScheduler.from_config(pipe.scheduler.config)
 
-prompt = "high quality"
-(
-    prompt_embeds,
-    negative_prompt_embeds,
-    pooled_prompt_embeds,
-    negative_pooled_prompt_embeds,
-) = pipe.encode_prompt(prompt, "cuda", True)
-
-
 
 @spaces.GPU
-def infer(image, model_selection, ratio_choice, overlap_width):
-
+def infer(image, model_selection, width, height, overlap_width, num_inference_steps, prompt_input=None):
     source = image
-    
-    if ratio_choice == "16:9":
-        target_ratio = (16, 9)  # Set the new target ratio to 16:9
-        target_width = 1280  # Adjust target width based on desired resolution
-        overlap = overlap_width
-        #fade_width = 24
-        max_height = 720  # Adjust max height instead of width
-        
-        # Resize the image if it's taller than max_height
-        if source.height > max_height:
-            scale_factor = max_height / source.height
-            new_height = max_height
-            new_width = int(source.width * scale_factor)
-            source = source.resize((new_width, new_height), Image.LANCZOS)
-        
-        # Calculate the required width for the 16:9 ratio
-        target_width = (source.height * target_ratio[0]) // target_ratio[1]
-        
-        # Calculate margins (now left and right)
-        margin_x = (target_width - source.width) // 2
-        
-        # Calculate new output size
-        output_size = (target_width, source.height)
-        
-        # Create a white background
-        background = Image.new('RGB', output_size, (255, 255, 255))
-        
-        # Calculate position to paste the original image
-        position = (margin_x, 0)
-        
-        # Paste the original image onto the white background
-        background.paste(source, position)
-        
-        # Create the mask
-        mask = Image.new('L', output_size, 255)  # Start with all white
-        mask_draw = ImageDraw.Draw(mask)
-        mask_draw.rectangle([
-            (margin_x + overlap, overlap),
-            (margin_x + source.width - overlap, source.height - overlap)
-        ], fill=0)
-        
-        # Prepare the image for ControlNet
-        cnet_image = background.copy()
-        cnet_image.paste(0, (0, 0), mask)
-    
-        for image in pipe(
-            prompt_embeds=prompt_embeds,
-            negative_prompt_embeds=negative_prompt_embeds,
-            pooled_prompt_embeds=pooled_prompt_embeds,
-            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
-            image=cnet_image,
-        ):
-            yield cnet_image, image
-    
-        image = image.convert("RGBA")
-        cnet_image.paste(image, (0, 0), mask)
-    
-        yield background, cnet_image
+    target_size = (width, height)
+    target_ratio = (width, height)  # Calculate aspect ratio from width and height
+    overlap = overlap_width
 
-    elif ratio_choice == "9:16":
-        
-        target_ratio=(9, 16)
-        target_height=1280
-        overlap=overlap_width
-        #fade_width=24
-        max_width = 720
-        # Resize the image if it's wider than max_width
-        if source.width > max_width:
-            scale_factor = max_width / source.width
-            new_width = max_width
-            new_height = int(source.height * scale_factor)
-            source = source.resize((new_width, new_height), Image.LANCZOS)
-        
-        # Calculate the required height for 9:16 ratio
-        target_height = (source.width * target_ratio[1]) // target_ratio[0]
-        
-        # Calculate margins (only top and bottom)
-        margin_y = (target_height - source.height) // 2
-        
-        # Calculate new output size
-        output_size = (source.width, target_height)
-        
-        # Create a white background
-        background = Image.new('RGB', output_size, (255, 255, 255))
-        
-        # Calculate position to paste the original image
-        position = (0, margin_y)
-        
-        # Paste the original image onto the white background
-        background.paste(source, position)
-        
-        # Create the mask
-        mask = Image.new('L', output_size, 255)  # Start with all white
-        mask_draw = ImageDraw.Draw(mask)
-        mask_draw.rectangle([
-            (overlap, margin_y + overlap),
-            (source.width - overlap, margin_y + source.height - overlap)
-        ], fill=0)
-        
-        # Prepare the image for ControlNet
-        cnet_image = background.copy()
-        cnet_image.paste(0, (0, 0), mask)
-    
-        for image in pipe(
-            prompt_embeds=prompt_embeds,
-            negative_prompt_embeds=negative_prompt_embeds,
-            pooled_prompt_embeds=pooled_prompt_embeds,
-            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
-            image=cnet_image,
-        ):
-            yield cnet_image, image
-    
-        image = image.convert("RGBA")
-        cnet_image.paste(image, (0, 0), mask)
-    
-        yield background, cnet_image
+    # Upscale if source is smaller than target in both dimensions
+    if source.width < target_size[0] and source.height < target_size[1]:
+        scale_factor = min(target_size[0] / source.width, target_size[1] / source.height)
+        new_width = int(source.width * scale_factor)
+        new_height = int(source.height * scale_factor)
+        source = source.resize((new_width, new_height), Image.LANCZOS)
 
-    elif ratio_choice == "1:1":
-        target_ratio = (1, 1)
-        target_size = (1024, 1024)
-        overlap = overlap_width
+    if source.width > target_size[0] or source.height > target_size[1]:
+        scale_factor = min(target_size[0] / source.width, target_size[1] / source.height)
+        new_width = int(source.width * scale_factor)
+        new_height = int(source.height * scale_factor)
+        source = source.resize((new_width, new_height), Image.LANCZOS)
 
-        if source.width > target_size[0] or source.height > target_size[1]:
-            scale_factor = min(target_size[0] / source.width, target_size[1] / source.height)
-            new_width = int(source.width * scale_factor)
-            new_height = int(source.height * scale_factor)
-            source = source.resize((new_width, new_height), Image.LANCZOS)
-        
-        margin_x = (target_size[0] - source.width) // 2
-        margin_y = (target_size[1] - source.height) // 2
+    margin_x = (target_size[0] - source.width) // 2
+    margin_y = (target_size[1] - source.height) // 2
 
-        background = Image.new('RGB', target_size, (255, 255, 255))
-        background.paste(source, (margin_x, margin_y))
+    background = Image.new('RGB', target_size, (255, 255, 255))
+    background.paste(source, (margin_x, margin_y))
 
-        mask = Image.new('L', target_size, 255)
-        mask_draw = ImageDraw.Draw(mask)
-        mask_draw.rectangle([
-            (margin_x + overlap, margin_y + overlap),
-            (margin_x + source.width - overlap, margin_y + source.height - overlap)
-        ], fill=0)
+    mask = Image.new('L', target_size, 255)
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.rectangle([
+        (margin_x + overlap, margin_y + overlap),
+        (margin_x + source.width - overlap, margin_y + source.height - overlap)
+    ], fill=0)
 
-        cnet_image = background.copy()
-        cnet_image.paste(0, (0, 0), mask)
+    cnet_image = background.copy()
+    cnet_image.paste(0, (0, 0), mask)
 
-        for image in pipe(
-            prompt_embeds=prompt_embeds,
-            negative_prompt_embeds=negative_prompt_embeds,
-            pooled_prompt_embeds=pooled_prompt_embeds,
-            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
-            image=cnet_image,
-        ):
-            yield cnet_image, image
+    final_prompt = "high quality"
+    if prompt_input.strip() != "":
+        final_prompt += ", " + prompt_input
 
-        image = image.convert("RGBA")
-        cnet_image.paste(image, (0, 0), mask)
+    (
+        prompt_embeds,
+        negative_prompt_embeds,
+        pooled_prompt_embeds,
+        negative_pooled_prompt_embeds,
+    ) = pipe.encode_prompt(final_prompt, "cuda", True)
 
-        yield background, cnet_image
-        
+    for image in pipe(
+        prompt_embeds=prompt_embeds,
+        negative_prompt_embeds=negative_prompt_embeds,
+        pooled_prompt_embeds=pooled_prompt_embeds,
+        negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
+        image=cnet_image,
+        num_inference_steps=num_inference_steps
+    ):
+        yield cnet_image, image
+
+    image = image.convert("RGBA")
+    cnet_image.paste(image, (0, 0), mask)
+
+    yield background, cnet_image
+
 
 def clear_result():
     return gr.update(value=None)
@@ -237,50 +128,61 @@ title = """<h1 align="center">Diffusers Image Outpaint</h1>
 
 with gr.Blocks(css=css) as demo:
     with gr.Column():
-        
         gr.HTML(title)
 
         with gr.Row():
-            
             with gr.Column():
-                
                 input_image = gr.Image(
                     type="pil",
                     label="Input Image",
                     sources=["upload"],
                 )
-     
+
                 with gr.Row():
-                    ratio = gr.Radio(
-                        label="Expected ratio", 
-                        choices=["1:1", "9:16", "16:9"],
-                        value = "9:16"
+                    with gr.Column(scale=2):
+                        prompt_input = gr.Textbox(label="Prompt (Optional)")
+                    with gr.Column(scale=1):
+                        run_button = gr.Button("Generate")
+
+                with gr.Row():
+                    width_slider = gr.Slider(
+                        label="Width",
+                        minimum=720,
+                        maximum=1440,
+                        step=8,
+                        value=1440,  # Set a default value
+                    )
+                    height_slider = gr.Slider(
+                        label="Height",
+                        minimum=720,
+                        maximum=1440,
+                        step=8,
+                        value=1024,  # Set a default value
                     )
                     model_selection = gr.Dropdown(
                         choices=list(MODELS.keys()),
                         value="RealVisXL V5.0 Lightning",
                         label="Model",
                     )
+                    num_inference_steps = gr.Slider(label="Steps", minimum=4, maximum=12, step=1, value=8 )
 
                 overlap_width = gr.Slider(
                     label="Mask overlap width",
-                    minimum = 1,
-                    maximum = 50,
-                    value = 42,
-                    step = 1
+                    minimum=1,
+                    maximum=50,
+                    value=42,
+                    step=1
                 )
-    
-                run_button = gr.Button("Generate")
 
                 gr.Examples(
-                    examples = [
-                        ["./examples/example_1.webp", "RealVisXL V5.0 Lightning", "9:16"],
-                        ["./examples/example_2.jpg", "RealVisXL V5.0 Lightning", "16:9"],
-                        ["./examples/example_3.jpg", "RealVisXL V5.0 Lightning", "1:1"]
+                    examples=[
+                        ["./examples/example_1.webp", "RealVisXL V5.0 Lightning", 1280, 720],  
+                        ["./examples/example_2.jpg", "RealVisXL V5.0 Lightning", 720, 1280],  
+                        ["./examples/example_3.jpg", "RealVisXL V5.0 Lightning", 1024, 1024],  
                     ],
-                    inputs = [input_image, model_selection, ratio]
+                    inputs=[input_image, model_selection, width_slider, height_slider],
                 )
-            
+
             with gr.Column():
                 result = ImageSlider(
                     interactive=False,
@@ -293,9 +195,18 @@ with gr.Blocks(css=css) as demo:
         outputs=result,
     ).then(
         fn=infer,
-        inputs=[input_image, model_selection, ratio, overlap_width],
+        inputs=[input_image, model_selection, width_slider, height_slider, overlap_width, num_inference_steps, prompt_input],
         outputs=result,
     )
 
+    prompt_input.submit(
+        fn=clear_result,
+        inputs=None,
+        outputs=result,
+    ).then(
+        fn=infer,
+        inputs=[input_image, model_selection, width_slider, height_slider, overlap_width, num_inference_steps, prompt_input],
+        outputs=result,
+    )
 
 demo.launch(share=False)
