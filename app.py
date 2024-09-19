@@ -57,53 +57,6 @@ prompt = "high quality"
 
 
 
-"""
-def fill_image(image, model_selection):
-
-    margin = 256
-    overlap = 24
-    # Open the original image
-    source = image  # Changed from image["background"] to match new input format
-    
-    # Calculate new output size
-    output_size = (source.width + 2*margin, source.height + 2*margin)
-    
-    # Create a white background
-    background = Image.new('RGB', output_size, (255, 255, 255))
-    
-    # Calculate position to paste the original image
-    position = (margin, margin)
-    
-    # Paste the original image onto the white background
-    background.paste(source, position)
-    
-    # Create the mask
-    mask = Image.new('L', output_size, 255)  # Start with all white
-    mask_draw = ImageDraw.Draw(mask)
-    mask_draw.rectangle([
-        (position[0] + overlap, position[1] + overlap),
-        (position[0] + source.width - overlap, position[1] + source.height - overlap)
-    ], fill=0)
-    
-    # Prepare the image for ControlNet
-    cnet_image = background.copy()
-    cnet_image.paste(0, (0, 0), mask)
-
-    for image in pipe(
-        prompt_embeds=prompt_embeds,
-        negative_prompt_embeds=negative_prompt_embeds,
-        pooled_prompt_embeds=pooled_prompt_embeds,
-        negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
-        image=cnet_image,
-    ):
-        yield image, cnet_image
-
-    image = image.convert("RGBA")
-    cnet_image.paste(image, (0, 0), mask)
-
-    yield background, cnet_image
-"""
-
 @spaces.GPU
 def infer(image, model_selection, ratio_choice, overlap_width):
 
@@ -224,6 +177,47 @@ def infer(image, model_selection, ratio_choice, overlap_width):
         cnet_image.paste(image, (0, 0), mask)
     
         yield background, cnet_image
+
+    elif ratio_choice == "1:1":
+        target_ratio = (1, 1)
+        target_size = (1024, 1024)
+        overlap = overlap_width
+
+        if source.width > target_size[0] or source.height > target_size[1]:
+            scale_factor = min(target_size[0] / source.width, target_size[1] / source.height)
+            new_width = int(source.width * scale_factor)
+            new_height = int(source.height * scale_factor)
+            source = source.resize((new_width, new_height), Image.LANCZOS)
+        
+        margin_x = (target_size[0] - source.width) // 2
+        margin_y = (target_size[1] - source.height) // 2
+
+        background = Image.new('RGB', target_size, (255, 255, 255))
+        background.paste(source, (margin_x, margin_y))
+
+        mask = Image.new('L', target_size, 255)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.rectangle([
+            (margin_x + overlap, margin_y + overlap),
+            (margin_x + source.width - overlap, margin_y + source.height - overlap)
+        ], fill=0)
+
+        cnet_image = background.copy()
+        cnet_image.paste(0, (0, 0), mask)
+
+        for image in pipe(
+            prompt_embeds=prompt_embeds,
+            negative_prompt_embeds=negative_prompt_embeds,
+            pooled_prompt_embeds=pooled_prompt_embeds,
+            negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
+            image=cnet_image,
+        ):
+            yield cnet_image, image
+
+        image = image.convert("RGBA")
+        cnet_image.paste(image, (0, 0), mask)
+
+        yield background, cnet_image
         
 
 def clear_result():
@@ -259,7 +253,7 @@ with gr.Blocks(css=css) as demo:
                 with gr.Row():
                     ratio = gr.Radio(
                         label="Expected ratio", 
-                        choices=["9:16", "16:9"],
+                        choices=["1:1", "9:16", "16:9"],
                         value = "9:16"
                     )
                     model_selection = gr.Dropdown(
@@ -280,9 +274,9 @@ with gr.Blocks(css=css) as demo:
 
                 gr.Examples(
                     examples = [
-                        ["./examples/example_1.webp", "RealVisXL V5.0 Lightning", "16:9"],
+                        ["./examples/example_1.webp", "RealVisXL V5.0 Lightning", "9:16"],
                         ["./examples/example_2.jpg", "RealVisXL V5.0 Lightning", "16:9"],
-                        ["./examples/example_3.jpg", "RealVisXL V5.0 Lightning", "9:16"]
+                        ["./examples/example_3.jpg", "RealVisXL V5.0 Lightning", "1:1"]
                     ],
                     inputs = [input_image, model_selection, ratio]
                 )
