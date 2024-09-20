@@ -147,8 +147,7 @@ with gr.Blocks(css=css) as demo:
                     type="pil",
                     label="Input Image",
                     sources=["upload"],
-                    width = 720,
-                    height = 720
+                    height = 300
                 )
                 
                 prompt_input = gr.Textbox(label="Prompt (Optional)")
@@ -157,10 +156,11 @@ with gr.Blocks(css=css) as demo:
                     target_ratio = gr.Radio(
                         label = "Expected Ratio",
                         choices = ["9:16", "16:9", "Custom"],
-                        value = "9:16"
+                        value = "9:16",
+                        scale = 2
                     )
                     
-                    run_button = gr.Button("Generate")
+                    run_button = gr.Button("Generate", scale=1)
 
                 with gr.Accordion(label="Advanced settings", open=False) as settings_panel:
                     with gr.Column(): 
