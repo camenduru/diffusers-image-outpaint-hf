@@ -128,7 +128,7 @@ def clear_result():
 
 css = """
 .gradio-container {
-    width: 1800px !important;
+    width: 1200px !important;
 }
 """
 
@@ -147,22 +147,23 @@ with gr.Blocks(css=css) as demo:
                     type="pil",
                     label="Input Image",
                     sources=["upload"],
+                    width = 720,
+                    height = 720
                 )
-
-                target_ratio = gr.Radio(
-                    label = "Expected Ratio",
-                    choices = ["9:16", "16:9", "Custom"],
-                    value = "9:16"
-                )
-
+                
+                prompt_input = gr.Textbox(label="Prompt (Optional)")
+                
                 with gr.Row():
-                    with gr.Column(scale=2):
-                        prompt_input = gr.Textbox(label="Prompt (Optional)")
-                    with gr.Column(scale=1):
-                        run_button = gr.Button("Generate")
+                    target_ratio = gr.Radio(
+                        label = "Expected Ratio",
+                        choices = ["9:16", "16:9", "Custom"],
+                        value = "9:16"
+                    )
+                    
+                    run_button = gr.Button("Generate")
 
                 with gr.Accordion(label="Advanced settings", open=False) as settings_panel:
-                    with gr.Column():
+                    with gr.Column(): 
                         with gr.Row():
                             width_slider = gr.Slider(
                                 label="Width",
