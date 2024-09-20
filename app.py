@@ -110,6 +110,17 @@ def infer(image, model_selection, width, height, overlap_width, num_inference_st
 
     yield background, cnet_image
 
+def preload_presets(target_ratio):
+    if target_ratio == "9:16":
+        changed_width = 720
+        changed_height = 1024
+        return changed_width, changed_height, gr.update(open=False)
+    elif target_ratio == "16:9":
+        changed_width = 1024
+        changed_height = 720
+        return changed_width, changed_height, gr.update(open=False)
+    elif target_ratio == "Custom":
+        return 720, 1024, gr.update(open=True)
 
 def clear_result():
     return gr.update(value=None)
@@ -117,7 +128,7 @@ def clear_result():
 
 css = """
 .gradio-container {
-    width: 1024px !important;
+    width: 1800px !important;
 }
 """
 
@@ -138,41 +149,50 @@ with gr.Blocks(css=css) as demo:
                     sources=["upload"],
                 )
 
+                target_ratio = gr.Radio(
+                    label = "Expected Ratio",
+                    choices = ["9:16", "16:9", "Custom"],
+                    value = "9:16"
+                )
+
                 with gr.Row():
                     with gr.Column(scale=2):
                         prompt_input = gr.Textbox(label="Prompt (Optional)")
                     with gr.Column(scale=1):
                         run_button = gr.Button("Generate")
 
-                with gr.Row():
-                    width_slider = gr.Slider(
-                        label="Width",
-                        minimum=720,
-                        maximum=1440,
-                        step=8,
-                        value=1440,  # Set a default value
-                    )
-                    height_slider = gr.Slider(
-                        label="Height",
-                        minimum=720,
-                        maximum=1440,
-                        step=8,
-                        value=1024,  # Set a default value
-                    )
-                    model_selection = gr.Dropdown(
-                        choices=list(MODELS.keys()),
-                        value="RealVisXL V5.0 Lightning",
-                        label="Model",
-                    )
-                    num_inference_steps = gr.Slider(label="Steps", minimum=4, maximum=12, step=1, value=8 )
+                with gr.Accordion(label="Advanced settings", open=False) as settings_panel:
+                    with gr.Column():
+                        with gr.Row():
+                            width_slider = gr.Slider(
+                                label="Width",
+                                minimum=720,
+                                maximum=1440,
+                                step=8,
+                                value=720,  # Set a default value
+                            )
+                            height_slider = gr.Slider(
+                                label="Height",
+                                minimum=720,
+                                maximum=1440,
+                                step=8,
+                                value=1024,  # Set a default value
+                            )
+                        with gr.Row():
+                            model_selection = gr.Dropdown(
+                                choices=list(MODELS.keys()),
+                                value="RealVisXL V5.0 Lightning",
+                                label="Model",
+                            )
+                            num_inference_steps = gr.Slider(label="Steps", minimum=4, maximum=12, step=1, value=8 )
 
-                overlap_width = gr.Slider(
-                    label="Mask overlap width",
-                    minimum=1,
-                    maximum=50,
-                    value=42,
-                    step=1
-                )
+                        overlap_width = gr.Slider(
+                            label="Mask overlap width",
+                            minimum=1,
+                            maximum=50,
+                            value=42,
+                            step=1
+                        )
 
                 gr.Examples(
                     examples=[
@@ -189,6 +209,12 @@ with gr.Blocks(css=css) as demo:
                     label="Generated Image",
                 )
 
+    target_ratio.change(
+        fn = preload_presets,
+        inputs = [target_ratio],
+        outputs = [width_slider, height_slider, settings_panel],
+        queue = False
+    )
     run_button.click(
         fn=clear_result,
         inputs=None,
