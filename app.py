@@ -177,7 +177,7 @@ with gr.Blocks(css=css) as demo:
                                 minimum=720,
                                 maximum=1440,
                                 step=8,
-                                value=1024,  # Set a default value
+                                value=1280,  # Set a default value
                             )
                         with gr.Row():
                             model_selection = gr.Dropdown(
