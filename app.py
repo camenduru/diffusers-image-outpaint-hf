@@ -113,14 +113,14 @@ def infer(image, model_selection, width, height, overlap_width, num_inference_st
 def preload_presets(target_ratio):
     if target_ratio == "9:16":
         changed_width = 720
-        changed_height = 1024
+        changed_height = 1280
         return changed_width, changed_height, gr.update(open=False)
     elif target_ratio == "16:9":
-        changed_width = 1024
+        changed_width = 1280
         changed_height = 720
         return changed_width, changed_height, gr.update(open=False)
     elif target_ratio == "Custom":
-        return 720, 1024, gr.update(open=True)
+        return 720, 1280, gr.update(open=True)
 
 def clear_result():
     return gr.update(value=None)
