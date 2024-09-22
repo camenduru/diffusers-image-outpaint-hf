@@ -234,4 +234,4 @@ with gr.Blocks(css=css) as demo:
         outputs=result,
     )
 
-demo.queue(max_size=12).launch(share=True, show_error=True, show_api=True, inline=False)
+demo.queue().launch(share=True, show_error=True, show_api=True, inline=False)
