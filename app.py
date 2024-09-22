@@ -1,5 +1,4 @@
 import gradio as gr
-import spaces
 import torch
 from diffusers import AutoencoderKL, TCDScheduler
 from diffusers.models.model_loading_utils import load_state_dict
@@ -48,7 +47,6 @@ pipe = StableDiffusionXLFillPipeline.from_pretrained(
 pipe.scheduler = TCDScheduler.from_config(pipe.scheduler.config)
 
 
-@spaces.GPU
 def infer(image, model_selection, width, height, overlap_width, num_inference_steps, prompt_input=None):
     source = image
     target_size = (width, height)
@@ -236,4 +234,4 @@ with gr.Blocks(css=css) as demo:
         outputs=result,
     )
 
-demo.queue(max_size=12).launch(share=False, show_error=True, show_api=False)
+demo.queue(max_size=12).launch(share=True, show_error=True, show_api=True, inline=False)
